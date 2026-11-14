@@ -4,7 +4,8 @@ version = "0.3.1"
 edition = "2021"
 description = "Apple Music FairPlay SAMPLE-AES sample decryption library (cdylib FFI)"
 license = "MIT"
-repository = "https://github.com/WorldObservationLog/Temari"
+repository = "https://github.com/glomatico/Temari"
+publish = false
 readme = "README.md"
 keywords = ["decryption"]
 categories = ["cryptography", "multimedia"]
@@ -18,6 +19,9 @@ path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
+
+[build-dependencies]
+cc = "1.2"
 
 [profile.release]
 opt-level = 3

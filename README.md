@@ -5,6 +5,43 @@ The project name comes from [Tsukimura Temari (月村手毬)](https://bangumi.tv
 
 > [中文版 README](./README.zh.md)
 
+> **glomatico fork:** This repository preserves upstream history and adds an
+> experimental backend for Apple Music **3.6.0-beta, build 1109**. The fork is
+> distributed via **GitHub only**, not crates.io or PyPI. Gamdl uses its
+> native Rust API.
+
+### Native Rust integration (Gamdl)
+
+Pin a reviewed commit of the GitHub fork:
+
+```toml
+[dependencies]
+temari = { git = "https://github.com/glomatico/Temari.git", rev = "<commit-sha>" }
+```
+
+```rust
+use temari::{decrypt, decrypt_par, template_from_json};
+
+let template = template_from_json(&context_json)?;
+let plaintext = decrypt(&template, &encrypted_sample);
+let batch = decrypt_par(&template, &[encrypted_sample.as_slice()]);
+```
+
+The context JSON selects a backend:
+
+| Context | Engine |
+|---|---|
+| Untagged upstream 40020-style JSON | Original upstream Rust rounds |
+| `profile: apple-music-3.6.0.1109-x86_64-research-v1` | Legacy C rounds, linked into Rust |
+| Unknown explicit profile | Rejected |
+
+The legacy backend requires a matching, version-pinned context exporter.
+ARM64 capture from the original APK remains unimplemented. No Apple native
+libraries or APK files are downloaded during compilation.
+
+See [legacy backend design and tests](docs/legacy-profile.md). The Rust tests
+use fabricated contexts and independently emulated reference output.
+
 ### What is this
 This library decrypts content protected by Apple Music's FairPlay Streaming DRM. Technically, it supports decrypting content encrypted via the `NfcRKVnxuKZy04KWbdFu71Ou` method.
 
@@ -13,9 +50,11 @@ It depends on the decryption-context data provided by [WorldObservationLog/wrapp
 ### How to use
 If you are not a developer, you probably do not need this library. You should look at [zhaarey/apple-music-downloader](https://github.com/zhaarey/apple-music-downloader) and [WorldObservationLog/AppleMusicDecrypt](https://github.com/WorldObservationLog/AppleMusicDecrypt).
 
-### Install from package registries
+### Upstream package registries (not this fork)
 
-All three packages are published and self-contained (platform cdylibs bundled):
+The original upstream project publishes these packages. **They do not include
+the legacy backend from this fork.** They are documented here for historical
+upstream compatibility:
 
 | Registry | Package | Install |
 |---|---|---|

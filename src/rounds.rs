@@ -22,11 +22,12 @@ pub struct Template {
     pub ctx: Vec<u8>,
     pub st_init: St,
     pub r1_entry: R1Entry,
+    pub legacy: Option<crate::legacy::LegacyTemplate>,
 }
 
 impl Template {
     pub fn new(ctx: Vec<u8>, st_init: St, r1_entry: R1Entry) -> Template {
-        Template { ctx, st_init, r1_entry }
+        Template { ctx, st_init, r1_entry, legacy: None }
     }
 }
 
@@ -125,6 +126,10 @@ fn process_block(tmpl: &Template, st: &mut St, ct: &[u8], bi: usize, out16: &mut
 /// Decrypt the 16-byte-aligned prefix of `ciphertext` into a pre-sized slice.
 /// `out.len()` must be >= `ciphertext.len() / 16 * 16`.
 fn decrypt_blocks_into(tmpl: &Template, ciphertext: &[u8], out: &mut [u8]) {
+    if tmpl.legacy.is_some() {
+        crate::legacy::decrypt_aligned(tmpl, ciphertext, out);
+        return;
+    }
     let nblocks = ciphertext.len() / 16;
     let mut st = tmpl.st_init;
     for bi in 0..nblocks {
@@ -143,6 +148,11 @@ fn decrypt_blocks_pair_into(
     out1: &mut [u8],
     out2: &mut [u8],
 ) {
+    if tmpl.legacy.is_some() {
+        crate::legacy::decrypt_aligned(tmpl, ct1, out1);
+        crate::legacy::decrypt_aligned(tmpl, ct2, out2);
+        return;
+    }
     let n1 = ct1.len() / 16;
     let n2 = ct2.len() / 16;
     let n = n1.max(n2);

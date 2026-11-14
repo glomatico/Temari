@@ -1,4 +1,9 @@
 ## Temari
+
+> **glomatico fork:** 此分支增加对 Apple Music 3.6.0-beta build 1109 的实验性
+> 解密后端，只通过 GitHub 分发，不发布到 crates.io 或 PyPI。
+> Rust 依赖和限制请参阅 [英文 README](README.md) 与
+> [legacy profile 文档](docs/legacy-profile.md)。
 Apple Music Fairplay Streaming 解密库
 
 项目名来自[月村手毬（Tsukimura Temari）](https://bangumi.tv/character/153576)

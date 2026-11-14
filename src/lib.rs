@@ -9,8 +9,15 @@
 //!
 //! 网络服务(10020 TCP / gRPC Decrypt)与 CLI 工具见 `tools/temari-decrypt`(独立 crate)。
 pub mod ffi;
+mod legacy;
 mod pool;
 pub mod rounds;
 pub mod rounds_gen;
 pub mod stream;
 pub mod template;
+
+// Native Rust consumers (e.g. Gamdl) do not need Python bindings or the C FFI.
+// The existing low-level API remains under rounds/template; these re-exports
+// provide convenient imports without changing upstream behavior.
+pub use rounds::{decrypt, decrypt_par, Template};
+pub use template::template_from_json;

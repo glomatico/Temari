@@ -1,163 +1,60 @@
-name: release
+name: GitHub-only release
 
-# Triggered by a `v*` tag (e.g. v0.1.0) or manually. Builds the cdylib on each
-# native platform, bundles ALL platform libs into a single universal
-# `py3-none-any` wheel (the Python wrapper selects the right lib at runtime),
-# publishes to PyPI and crates.io, and commits the platform libs into the Go
-# module so `go get` ships them. Needs secrets: PYPI_API_TOKEN,
-# CARGO_REGISTRY_TOKEN.
-
+# Deliberately no PyPI, crates.io or Go-module publication.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
 permissions:
-  contents: write   # go-bundle commits the platform libs into the Go module
+  contents: read
 
 jobs:
-  libs:
-    name: libs (${{ matrix.name }})
+  native-libraries:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: linux-x86_64, os: ubuntu-latest, targets: "" }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, targets: "" }
-          - { name: android-arm64, os: ubuntu-latest, targets: aarch64-linux-android }
-          # Windows arm64 / macOS x86_64 are CROSS-compiled on the x86_64 / arm64
-          # runners (no Intel-Mac runner needed):
-          - { name: windows-x86_64, os: windows-latest, targets: aarch64-pc-windows-msvc }
-          - { name: macos-arm64, os: macos-14, targets: x86_64-apple-darwin }
+          - { os: ubuntu-latest, name: linux-x86_64, file: libtemari.so }
+          - { os: ubuntu-24.04-arm, name: linux-arm64, file: libtemari.so }
+          - { os: macos-latest, name: macos-arm64, file: libtemari.dylib }
+          - { os: windows-latest, name: windows-x86_64, file: temari.dll }
+    name: build (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Install cross-compile targets
-        if: matrix.targets != ''
-        run: rustup target add ${{ matrix.targets }}
-      - name: Install Android NDK
-        if: matrix.name == 'android-arm64'
-        run: |
-          # ubuntu-latest ships the NDK under $ANDROID_HOME/ndk/<version>;
-          # point ANDROID_NDK_HOME at it for scripts/build_platform_libs.py
-          echo "ANDROID_NDK_HOME=$(ls -d "$ANDROID_HOME"/ndk/* | head -1)" >> "$GITHUB_ENV"
-      - name: Build bundled cdylib (host + cross targets)
+      - name: Test
+        run: cargo test --release --locked
+      - name: Build native library
+        run: cargo build --release --locked
+      - name: Package library
         shell: bash
         run: |
-          rm -rf bindings/python/temari/lib bindings/go/lib
-          python scripts/build_platform_libs.py
-      - name: Upload platform libs
-        uses: actions/upload-artifact@v7
+          mkdir -p dist
+          cp "target/release/${{ matrix.file }}" "dist/temari-${{ matrix.name }}-${{ matrix.file }}"
+      - uses: actions/upload-artifact@v4
         with:
-          name: lib-${{ matrix.name }}
-          path: |
-            bindings/go/lib
-            bindings/python/temari/lib
+          name: temari-${{ matrix.name }}
+          path: dist/*
           if-no-files-found: error
 
-  wheels:
-    name: build universal wheel
-    needs: libs
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: native-libraries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v7
+      - uses: actions/download-artifact@v4
         with:
-          python-version: "3.12"
-      - uses: actions/download-artifact@v8
-        with:
-          path: libs
-          pattern: lib-*
+          pattern: temari-*
           merge-multiple: true
-      - name: Assemble all platform libs into the Python package
-        run: |
-          find libs -type f | head -20
-          rm -rf bindings/python/temari/lib
-          mkdir -p bindings/python/temari/lib
-          find libs -type d \( -name "linux-x86_64" -o -name "linux-arm64" \
-            -o -name "linux-aarch64" -o -name "android-arm64" \
-            -o -name "windows-x86_64" -o -name "windows-arm64" \
-            -o -name "macos-arm64" -o -name "macos-x86_64" \) \
-            -exec cp -r {} bindings/python/temari/lib/ \;
-          # normalize the legacy linux-aarch64 dir name to linux-arm64
-          if [ -d bindings/python/temari/lib/linux-aarch64 ] && [ ! -d bindings/python/temari/lib/linux-arm64 ]; then
-            mv bindings/python/temari/lib/linux-aarch64 bindings/python/temari/lib/linux-arm64
-          fi
-          find bindings/python/temari/lib -type f
-      - name: Build sdist + universal wheel
-        working-directory: bindings/python
-        run: |
-          python -m pip install --quiet build
-          python -m build
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: pypi-dist
-          path: bindings/python/dist/*
-
-  pypi:
-    name: publish to PyPI
-    needs: wheels
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
           path: dist
-          name: pypi-dist
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-
-  cargo:
-    name: publish to crates.io
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Publish to crates.io
+      - name: Publish binaries to GitHub Releases only
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish
-
-  go-bundle:
-    name: bundle libs into Go module
-    needs: libs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v8
-        with:
-          path: libs
-          pattern: lib-*
-          merge-multiple: true
-      - name: Assemble bindings/go/lib
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
         run: |
-          find libs -type f | head -20
-          rm -rf bindings/go/lib
-          mkdir -p bindings/go/lib
-          find libs -type d \( -name "linux-x86_64" -o -name "linux-arm64" \
-            -o -name "linux-aarch64" -o -name "android-arm64" \
-            -o -name "windows-x86_64" -o -name "windows-arm64" \
-            -o -name "macos-arm64" -o -name "macos-x86_64" \) \
-            -exec cp -r {} bindings/go/lib/ \;
-          # normalize the legacy linux-aarch64 dir name to linux-arm64
-          if [ -d bindings/go/lib/linux-aarch64 ] && [ ! -d bindings/go/lib/linux-arm64 ]; then
-            mv bindings/go/lib/linux-aarch64 bindings/go/lib/linux-arm64
-          fi
-          find bindings/go/lib -type f
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add bindings/go/lib
-          if git diff --cached --quiet; then
-            echo "no lib changes"
-          else
-            git commit -m "chore: bundle platform cdylibs into Go module [skip ci]"
-            git push origin HEAD:master || echo "warning: push failed — libs will be committed manually"
-          fi
+          gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --generate-notes

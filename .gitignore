@@ -5,7 +5,6 @@
 
 # Not shipped in the official submission (internal dev-only)
 /tools
-/tests
 
 # Python
 __pycache__/

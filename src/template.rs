@@ -243,6 +243,9 @@ pub fn template_from_json(json: &str) -> Result<Template, String> {
     for (k, v) in fields {
         map.insert(k, v);
     }
+    if map.contains_key("profile") {
+        return crate::legacy::from_fields(&map);
+    }
     let ctx_b64 = map.get("ctx").ok_or("no ctx field")?;
     let state_b64 = map.get("state").ok_or("no state field")?;
     let rcx = parse_hex(map.get("rcx").map(|s| s.as_str()).unwrap_or("0x0"))?;

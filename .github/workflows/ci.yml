@@ -1,80 +1,30 @@
-name: ci
+name: Rust CI
 
 on:
   push:
     branches: [master]
   pull_request:
 
-jobs:
-  test:
-    name: test (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.24"   # >=1.24 needed for macOS arm64 (dyld LC_UUID)
-          cache-dependency-path: bindings/go/go.sum
-      - name: Build cdylib
-        run: cargo build --release
-      - name: Rust tests
-        run: cargo test --release
-      - name: Python tests
-        working-directory: bindings/python
-        run: |
-          python -m pip install --quiet pytest
-          python -m pytest tests -q
-      - name: Go tests
-        working-directory: bindings/go
-        run: go vet ./... && go test ./...
+# This fork is consumed as a Cargo Git dependency; no registry publishing.
+permissions:
+  contents: read
 
-  libs:
-    name: libs (${{ matrix.name }})
+jobs:
+  rust:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: linux-x86_64, os: ubuntu-latest, targets: "" }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, targets: "" }
-          - { name: android-arm64, os: ubuntu-latest, targets: aarch64-linux-android }
-          # Windows arm64 / macOS x86_64 are CROSS-compiled on the x86_64 / arm64
-          # runners (no Intel-Mac runner needed):
-          - { name: windows-x86_64, os: windows-latest, targets: aarch64-pc-windows-msvc }
-          - { name: macos-arm64, os: macos-14, targets: x86_64-apple-darwin }
+          - { os: ubuntu-latest, name: linux-x86_64 }
+          - { os: ubuntu-24.04-arm, name: linux-arm64 }
+          - { os: macos-latest, name: macos-arm64 }
+          - { os: windows-latest, name: windows-x86_64 }
     runs-on: ${{ matrix.os }}
+    name: rust (${{ matrix.name }})
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Install cross-compile targets
-        if: matrix.targets != ''
-        run: rustup target add ${{ matrix.targets }}
-      - name: Install Android NDK
-        if: matrix.name == 'android-arm64'
-        run: |
-          # ubuntu-latest ships the NDK under $ANDROID_HOME/ndk/<version>;
-          # point ANDROID_NDK_HOME at it for scripts/build_platform_libs.py
-          echo "ANDROID_NDK_HOME=$(ls -d "$ANDROID_HOME"/ndk/* | head -1)" >> "$GITHUB_ENV"
-      - name: Build bundled cdylib (host + cross targets)
-        shell: bash
-        run: |
-          rm -rf bindings/python/temari/lib bindings/go/lib
-          python scripts/build_platform_libs.py
-      - name: Upload platform libs
-        uses: actions/upload-artifact@v7
-        with:
-          name: lib-${{ matrix.name }}
-          path: |
-            bindings/go/lib
-            bindings/python/temari/lib
-          if-no-files-found: error
+      - name: Test Rust crate and synthetic legacy fixtures
+        run: cargo test --locked
+      - name: Build Rust and cdylib
+        run: cargo build --release --locked
