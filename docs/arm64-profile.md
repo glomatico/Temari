@@ -8,7 +8,7 @@ architecture; the profile describes the source APK, not the client CPU.
 The flat JSON contract is:
 
 ```json
-{"profile":"apple-music-3.6.0.1109-arm64-v8a-research-v1","ctx":"<base64>","state":"<base64>"}
+{"profile":"apple-music-1109-arm64-v8a","ctx":"<base64>","state":"<base64>"}
 ```
 
 `ctx` decodes to exactly 9,504 bytes; `state` decodes to exactly 2,304 bytes.

@@ -48,7 +48,7 @@ fn fixture() -> String {
     state[0x240..0x244].copy_from_slice(&0xdb8920u32.to_le_bytes());
     let tables: Vec<u8> = (0..0x2520).map(|i| (i * 73 + 19) as u8).collect();
     format!(
-        r#"{{"profile":"apple-music-3.6.0.1109-arm64-v8a-research-v1","ctx":"{}","state":"{}"}}"#,
+        r#"{{"profile":"apple-music-1109-arm64-v8a","ctx":"{}","state":"{}"}}"#,
         b64(&tables),
         b64(&state)
     )
@@ -88,18 +88,18 @@ fn independent_synthetic_vectors_and_reset() {
 fn explicit_profile_and_relocation_validation() {
     let json = fixture();
     assert!(
-        template_from_json(&json.replace("arm64-v8a-research-v1", "arm64-v8a-research-v2"))
+        template_from_json(&json.replace("apple-music-1109-arm64-v8a", "apple-music-1109-unknown"))
             .is_err()
     );
     assert!(template_from_json(&json.replace("arm64-v8a", "x86_64")).is_err());
     let wrong = format!(
-        r#"{{"profile":"apple-music-3.6.0.1109-arm64-v8a-research-v1","ctx":"{}","state":"{}"}}"#,
+        r#"{{"profile":"apple-music-1109-arm64-v8a","ctx":"{}","state":"{}"}}"#,
         b64(&vec![0; 0x2520]),
         b64(&vec![0; 0x900])
     );
     assert!(template_from_json(&wrong).is_err());
     assert!(template_from_json(
-        r#"{"profile":"apple-music-3.6.0.1109-arm64-v8a-research-v1","ctx":"","state":""}"#
+        r#"{"profile":"apple-music-1109-arm64-v8a","ctx":"","state":""}"#
     )
     .is_err());
 }

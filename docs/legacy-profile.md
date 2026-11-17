@@ -14,7 +14,7 @@ Legacy JSON must include exactly this profile identifier:
 
 ```json
 {
-  "profile": "apple-music-3.6.0.1109-x86_64-research-v1",
+  "profile": "apple-music-1109-x86_64",
   "ctx": "<base64, decoded size 0x8000>",
   "state": "<base64, decoded size 0x800>",
   "bl": 0,

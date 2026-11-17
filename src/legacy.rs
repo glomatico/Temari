@@ -3,7 +3,7 @@
 use crate::rounds::{R1Entry, Template, ST_SIZE};
 use std::collections::HashMap;
 
-pub const PROFILE: &str = "apple-music-3.6.0.1109-x86_64-research-v1";
+pub const PROFILE: &str = "apple-music-1109-x86_64";
 #[derive(Clone)]
 pub struct LegacyTemplate {
     state: [u8; 0x800],

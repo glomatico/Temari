@@ -32,7 +32,7 @@ The context JSON selects a backend:
 | Context | Engine |
 |---|---|
 | Untagged upstream 40020-style JSON | Original upstream Rust rounds |
-| `profile: apple-music-3.6.0.1109-x86_64-research-v1` | Legacy C rounds, linked into Rust |
+| `profile: apple-music-1109-x86_64` | Legacy C rounds, linked into Rust |
 | Unknown explicit profile | Rejected |
 
 The legacy backend requires a matching, version-pinned context exporter.

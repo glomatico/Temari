@@ -4,7 +4,7 @@ use crate::rounds::{R1Entry, Template, ST_SIZE};
 use std::collections::HashMap;
 mod block;
 
-pub const PROFILE: &str = "apple-music-3.6.0.1109-arm64-v8a-research-v1";
+pub const PROFILE: &str = "apple-music-1109-arm64-v8a";
 const SP: u64 = 0x30000000;
 const CTX: u64 = 0x20000000;
 const INPUT: u64 = 0x40000000;

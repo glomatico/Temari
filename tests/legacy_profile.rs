@@ -46,7 +46,7 @@ fn legacy_native_rust_api_matches_independent_emulator() {
 #[test]
 fn unknown_explicit_profile_fails_closed() {
     let unknown = SYNTHETIC_LEGACY.replace(
-        "apple-music-3.6.0.1109-x86_64-research-v1",
+        "apple-music-1109-x86_64",
         "unsupported-legacy-version",
     );
     assert!(template_from_json(&unknown).is_err());
