@@ -6,7 +6,7 @@ The project name comes from [Tsukimura Temari (月村手毬)](https://bangumi.tv
 > [中文版 README](./README.zh.md)
 
 > **glomatico fork:** This repository preserves upstream history and adds an
-> experimental backend for Apple Music **3.6.0-beta, build 1109**. The fork is
+> architecture-specific backends for Apple Music **3.6.0-beta, build 1109**. The fork is
 > distributed via **GitHub only**, not crates.io or PyPI. Gamdl uses its
 > native Rust API.
 
@@ -33,14 +33,28 @@ The context JSON selects a backend:
 |---|---|
 | Untagged upstream 40020-style JSON | Original upstream Rust rounds |
 | `profile: apple-music-1109-x86_64` | Legacy C rounds, linked into Rust |
+| `profile: apple-music-1109-arm64-v8a` | Pure Rust ARM64 context backend; no Apple native libraries at runtime |
 | Unknown explicit profile | Rejected |
 
-The legacy backend requires a matching, version-pinned context exporter.
-ARM64 capture from the original APK remains unimplemented. No Apple native
-libraries or APK files are downloaded during compilation.
+Both build-1109 backends require a matching, version-pinned context exporter.
+The ARM64 exporter is implemented in the `tamari` branch of
+[glomatico/wrapper-v2](https://github.com/glomatico/wrapper-v2) (the new Wrapper-v2
+codebase); it exports architecture-specific state for Temari to decrypt locally.
+The ARM64 profile describes **the APK architecture**, not the computer's CPU:
+the pure Rust backend works on x86_64 hosts as well. No Apple native libraries
+or APK files are downloaded during compilation.
 
-See [legacy backend design and tests](docs/legacy-profile.md). The Rust tests
-use fabricated contexts and independently emulated reference output.
+**ARM64 status:** Validated under ARM64 QEMU against the pinned Apple Music
+build, including 120 comparisons covering real AAC/ALAC samples, synthetic
+samples, non-block-aligned tails, repeated context acquisition, and the x86_64
+reference backend. Sequential, parallel and streaming decryption are tested.
+The integrated Wrapper-v2 ARM64 exporter was also tested under QEMU. **Physical
+ARM64 hardware has not yet been tested**, and this does not imply compatibility
+with newer Apple Music builds or arbitrary APKs.
+
+See the [x86_64 backend](docs/legacy-profile.md) and
+[ARM64 backend](docs/arm64-profile.md) documentation. Public Rust tests use
+fabricated contexts and independently emulated reference output.
 
 ### What is this
 This library decrypts content protected by Apple Music's FairPlay Streaming DRM. Technically, it supports decrypting content encrypted via the `NfcRKVnxuKZy04KWbdFu71Ou` method.
@@ -53,7 +67,7 @@ If you are not a developer, you probably do not need this library. You should lo
 ### Upstream package registries (not this fork)
 
 The original upstream project publishes these packages. **They do not include
-the legacy backend from this fork.** They are documented here for historical
+the build-1109 backends from this fork.** They are documented here for historical
 upstream compatibility:
 
 | Registry | Package | Install |
