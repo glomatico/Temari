@@ -244,6 +244,9 @@ pub fn template_from_json(json: &str) -> Result<Template, String> {
         map.insert(k, v);
     }
     if map.contains_key("profile") {
+        if map.get("profile").map(String::as_str)==Some(crate::arm64::PROFILE) {
+            return crate::arm64::from_fields(&map);
+        }
         return crate::legacy::from_fields(&map);
     }
     let ctx_b64 = map.get("ctx").ok_or("no ctx field")?;

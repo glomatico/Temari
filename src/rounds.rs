@@ -23,11 +23,12 @@ pub struct Template {
     pub st_init: St,
     pub r1_entry: R1Entry,
     pub legacy: Option<crate::legacy::LegacyTemplate>,
+    pub arm64: Option<crate::arm64::Arm64Template>,
 }
 
 impl Template {
     pub fn new(ctx: Vec<u8>, st_init: St, r1_entry: R1Entry) -> Template {
-        Template { ctx, st_init, r1_entry, legacy: None }
+        Template { ctx, st_init, r1_entry, legacy: None, arm64: None }
     }
 }
 
@@ -126,6 +127,10 @@ fn process_block(tmpl: &Template, st: &mut St, ct: &[u8], bi: usize, out16: &mut
 /// Decrypt the 16-byte-aligned prefix of `ciphertext` into a pre-sized slice.
 /// `out.len()` must be >= `ciphertext.len() / 16 * 16`.
 fn decrypt_blocks_into(tmpl: &Template, ciphertext: &[u8], out: &mut [u8]) {
+    if tmpl.arm64.is_some() {
+        crate::arm64::decrypt_aligned(tmpl,ciphertext,out);
+        return;
+    }
     if tmpl.legacy.is_some() {
         crate::legacy::decrypt_aligned(tmpl, ciphertext, out);
         return;
@@ -151,6 +156,11 @@ fn decrypt_blocks_pair_into(
     if tmpl.legacy.is_some() {
         crate::legacy::decrypt_aligned(tmpl, ct1, out1);
         crate::legacy::decrypt_aligned(tmpl, ct2, out2);
+        return;
+    }
+    if tmpl.arm64.is_some() {
+        crate::arm64::decrypt_aligned(tmpl,ct1,out1);
+        crate::arm64::decrypt_aligned(tmpl,ct2,out2);
         return;
     }
     let n1 = ct1.len() / 16;

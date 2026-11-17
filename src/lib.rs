@@ -10,6 +10,7 @@
 //! 网络服务(10020 TCP / gRPC Decrypt)与 CLI 工具见 `tools/temari-decrypt`(独立 crate)。
 pub mod ffi;
 mod legacy;
+mod arm64;
 mod pool;
 pub mod rounds;
 pub mod rounds_gen;
